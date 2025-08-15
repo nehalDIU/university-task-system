@@ -31,6 +31,8 @@ export type TaskCategory =
   | 'documents'
   | 'blc'
   | 'groups'
+  | 'midterm'
+  | 'final-exam'
   | 'others'
 
 interface TaskCategoriesProps {
@@ -131,6 +133,20 @@ export const TaskCategories: React.FC<TaskCategoriesProps> = ({
       icon: Users, 
       count: categoryCounts['groups'] || 0,
       description: 'Group work and collaborative projects'
+    },
+    { 
+      id: 'midterm' as TaskCategory, 
+      label: 'Midterms', 
+      icon: GraduationCap, 
+      count: categoryCounts['midterm'] || 0,
+      description: 'Midterm examinations and assessments'
+    },
+    { 
+      id: 'final-exam' as TaskCategory, 
+      label: 'Final Exams', 
+      icon: GraduationCap, 
+      count: categoryCounts['final-exam'] || 0,
+      description: 'Final examinations and comprehensive assessments'
     },
     { 
       id: 'others' as TaskCategory, 

@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import EnhancedMainLayout from '@/components/layout/EnhancedMainLayout'
 
 export const metadata: Metadata = {
   title: 'Student Dashboard | University Task Management System',
@@ -21,9 +22,14 @@ export default function StudentLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen">
+    <EnhancedMainLayout
+      title="Student Dashboard"
+      subtitle="Manage your academic tasks and assignments"
+      showSearch={true}
+      showActions={true}
+    >
       {children}
-    </div>
+    </EnhancedMainLayout>
   )
 }
 

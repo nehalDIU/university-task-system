@@ -1,14 +1,30 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Metadata } from 'next'
-import { ListTodo, CheckCircle2, Clock, AlertCircle, Sparkles, CalendarDays, User } from 'lucide-react'
+import { ListTodo, CheckCircle2, Clock, AlertCircle, Sparkles, CalendarDays } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { isOverdue, formatUpcomingDueDate, cn } from '@/lib/utils'
 import { TaskList } from './components/EnhancedTaskList'
-import { TaskCategories, type TaskCategory } from './components/TaskCategories'
+import TaskCategories from './components/task-categories'
 import { Loader } from '@/components/ui/Loader'
 import type { Task, TaskSubmission, User as SupabaseUser } from '@/lib/supabase/types'
+
+// TaskCategory type
+type TaskCategory =
+  | 'presentation'
+  | 'assignment'
+  | 'quiz'
+  | 'lab-report'
+  | 'lab-final'
+  | 'lab-performance'
+  | 'task'
+  | 'documents'
+  | 'blc'
+  | 'groups'
+  | 'project'
+  | 'midterm'
+  | 'final-exam'
+  | 'others'
 
 // Enhanced types
 interface TaskWithSubmission extends Task {
@@ -38,6 +54,7 @@ export default function StudentDashboard() {
   const [statFilter, setStatFilter] = useState<StatFilter>('all')
   const [currentUpcomingTaskIndex, setCurrentUpcomingTaskIndex] = useState(0)
   const [showGreeting, setShowGreeting] = useState(true)
+  const [currentTime, setCurrentTime] = useState(new Date())
   
   const supabase = createBrowserClient()
   const MAX_UPCOMING_TASKS_TO_SHOW = 3
@@ -62,6 +79,15 @@ export default function StudentDashboard() {
       clearTimeout(greetingTimer)
       supabase.removeChannel(tasksChannel)
     }
+  }, [])
+
+  // Update current time every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 60000) // Update every minute
+
+    return () => clearInterval(timer)
   }, [])
 
   // Load user and tasks data
@@ -244,60 +270,88 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
         
         {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 sm:p-8 text-white overflow-hidden relative">
-          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
+        <div className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-white overflow-hidden shadow-professional-lg animate-slide-up">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90 backdrop-blur-sm"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
           <div className="relative z-10">
             <div
               className={cn(
                 "transition-all duration-1000 ease-in-out",
-                showGreeting ? "opacity-100 max-h-24" : "opacity-0 max-h-0 overflow-hidden"
+                showGreeting ? "opacity-100 max-h-[6rem]" : "opacity-0 max-h-0"
               )}
+              style={{ overflow: 'hidden' }}
             >
-              <div className="flex items-center gap-3 mb-2">
-                <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-yellow-300 flex-shrink-0" />
-                <h1 className="text-2xl sm:text-3xl font-bold">
-                  Welcome back, {user?.name || 'Student'}!
-                </h1>
-              </div>
-              <p className="text-blue-100 pl-10 sm:pl-11">
-                You have {taskStats.total} total tasks to manage.
-        </p>
-      </div>
+                           <div className="flex items-start gap-3 mb-2">
+               <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                 <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-300 flex-shrink-0" />
+               </div>
+               <div className="flex-1">
+                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">
+                   Welcome back, {user?.name || 'Student'}!
+                 </h1>
+                 {/* Mobile Greeting */}
+                 <div className="sm:hidden mt-1">
+                   <p className="text-blue-100/90 text-sm font-medium">
+                     {(() => {
+                       const hour = currentTime.getHours()
+                       if (hour < 12) return 'Good morning'
+                       if (hour < 17) return 'Good afternoon'
+                       return 'Good evening'
+                     })()} 👋
+                   </p>
+                 </div>
+               </div>
+             </div>
+                             <p className="text-blue-100/90 pl-0 sm:pl-14 text-sm sm:text-base">
+                 You have <span className="font-semibold text-white">{taskStats.total}</span> total tasks.
+                 {user?.departments?.name && (
+                   <span className="block text-xs sm:text-sm opacity-80 mt-1 font-medium">
+                     {user.departments.name} • {user.batches?.name} • Section {user.sections?.name}
+                   </span>
+                 )}
+               </p>
+            </div>
 
-            {/* Upcoming Task Display */}
+            {/* Upcoming Task Display Area */}
             <div className={cn(
-              "pl-10 sm:pl-11 min-h-[4rem] relative transition-all duration-1000 ease-in-out",
-              showGreeting ? "mt-3" : "mt-0"
+              "pl-12 sm:pl-14 min-h-[3.5em] relative transition-all duration-1000 ease-in-out",
+              showGreeting ? "mt-4" : "mt-0"
             )}>
               {upcomingTasksData.length > 0 ? (
                 upcomingTasksData.map((task, index) => (
                   <div
                     key={task.id}
                     className={cn(
-                      "absolute w-full transition-opacity duration-700 ease-in-out flex flex-col gap-2",
+                      "absolute w-full transition-opacity duration-700 ease-in-out flex flex-col gap-1.5",
                       index === currentUpcomingTaskIndex ? "opacity-100" : "opacity-0 pointer-events-none"
                     )}
                   >
-                    <p className="text-base font-medium text-blue-50 truncate" title={task.title}>
-                      📝 {task.title}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="w-4 h-4 text-blue-200 flex-shrink-0" />
-                      <p className="text-sm text-blue-200 font-light">
-                        {task.formattedDueDate}
-                      </p>
+                    <div className="flex items-start gap-3">
+                      <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm flex-shrink-0 mt-0.5">
+                        <CalendarDays className="w-3 h-3 text-blue-100" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm sm:text-base font-medium text-blue-50 line-clamp-1" title={task.title}>
+                          📝 {task.title}
+                        </p>
+                        <p className="text-xs text-blue-200/80 font-medium">
+                          Due {task.formattedDueDate}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-300" />
-                  <p className="text-sm text-blue-100">
-                    All caught up! No upcoming deadlines.
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-green-500/20 rounded-lg backdrop-blur-sm">
+                    <CheckCircle2 className="w-3 h-3 text-green-300" />
+                  </div>
+                  <p className="text-sm text-blue-100/80 font-medium">
+                    {showGreeting ? "No upcoming tasks right now." : "You're all caught up! 🎉"}
                   </p>
                 </div>
               )}
@@ -305,125 +359,199 @@ export default function StudentDashboard() {
           </div>
         </div>
         
-        {/* Task Statistics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {/* Task Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <button
             onClick={() => setStatFilter('all')}
             className={cn(
-              "rounded-xl p-4 shadow-sm hover:shadow-md transition-all transform hover:scale-105 focus:scale-105",
+              "group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-300 transform hover:scale-105 focus:scale-105 focus-ring",
+              "shadow-professional hover:shadow-professional-lg",
               statFilter === 'all' 
-                ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50 dark:bg-gray-700" 
-                : "bg-white dark:bg-gray-800"
+                ? "ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20" 
+                : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
             )}
           >
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <ListTodo className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="flex items-center justify-between mb-3">
+              <div className={cn(
+                "p-2.5 rounded-xl transition-colors duration-300",
+                statFilter === 'all' 
+                  ? "bg-blue-500 text-white shadow-lg" 
+                  : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-800/30"
+              )}>
+                <ListTodo className="w-5 h-5" />
               </div>
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
+              <span className={cn(
+                "text-2xl sm:text-3xl font-bold transition-colors duration-300",
+                statFilter === 'all' ? "text-blue-700 dark:text-blue-300" : "text-gray-900 dark:text-white"
+              )}>
                 {taskStats.total}
               </span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
+            <p className={cn(
+              "text-sm font-medium transition-colors duration-300",
+              statFilter === 'all' ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
+            )}>
+              Total Tasks
+            </p>
+            <div className={cn(
+              "absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+              "bg-gradient-to-r from-blue-500/5 to-indigo-500/5"
+            )} />
           </button>
 
           <button
             onClick={() => setStatFilter('overdue')}
             className={cn(
-              "rounded-xl p-4 shadow-sm hover:shadow-md transition-all transform hover:scale-105 focus:scale-105",
+              "group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-300 transform hover:scale-105 focus:scale-105 focus-ring",
+              "shadow-professional hover:shadow-professional-lg",
               statFilter === 'overdue' 
-                ? "ring-2 ring-red-500 dark:ring-red-400 bg-red-50 dark:bg-gray-700" 
-                : "bg-white dark:bg-gray-800"
+                ? "ring-2 ring-red-500 dark:ring-red-400 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20" 
+                : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
             )}
           >
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <div className="flex items-center justify-between mb-3">
+              <div className={cn(
+                "p-2.5 rounded-xl transition-colors duration-300",
+                statFilter === 'overdue' 
+                  ? "bg-red-500 text-white shadow-lg" 
+                  : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 group-hover:bg-red-100 dark:group-hover:bg-red-800/30"
+              )}>
+                <AlertCircle className="w-5 h-5" />
               </div>
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
+              <span className={cn(
+                "text-2xl sm:text-3xl font-bold transition-colors duration-300",
+                statFilter === 'overdue' ? "text-red-700 dark:text-red-300" : "text-gray-900 dark:text-white"
+              )}>
                 {taskStats.overdue}
               </span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
+            <p className={cn(
+              "text-sm font-medium transition-colors duration-300",
+              statFilter === 'overdue' ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"
+            )}>
+              Overdue
+            </p>
+            <div className={cn(
+              "absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+              "bg-gradient-to-r from-red-500/5 to-red-600/5"
+            )} />
           </button>
 
           <button
             onClick={() => setStatFilter('pending')}
             className={cn(
-              "rounded-xl p-4 shadow-sm hover:shadow-md transition-all transform hover:scale-105 focus:scale-105",
+              "group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-300 transform hover:scale-105 focus:scale-105 focus-ring",
+              "shadow-professional hover:shadow-professional-lg",
               statFilter === 'pending' 
-                ? "ring-2 ring-yellow-500 dark:ring-yellow-400 bg-yellow-50 dark:bg-gray-700" 
-                : "bg-white dark:bg-gray-800"
+                ? "ring-2 ring-indigo-500 dark:ring-indigo-400 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20" 
+                : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
             )}
           >
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            <div className="flex items-center justify-between mb-3">
+              <div className={cn(
+                "p-2.5 rounded-xl transition-colors duration-300",
+                statFilter === 'pending' 
+                  ? "bg-indigo-500 text-white shadow-lg" 
+                  : "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800/30"
+              )}>
+                <Clock className="w-5 h-5" />
               </div>
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
+              <span className={cn(
+                "text-2xl sm:text-3xl font-bold transition-colors duration-300",
+                statFilter === 'pending' ? "text-indigo-700 dark:text-indigo-300" : "text-gray-900 dark:text-white"
+              )}>
                 {taskStats.pending}
               </span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
+            <p className={cn(
+              "text-sm font-medium transition-colors duration-300",
+              statFilter === 'pending' ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500 dark:text-gray-400"
+            )}>
+              Pending
+            </p>
+            <div className={cn(
+              "absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+              "bg-gradient-to-r from-indigo-500/5 to-purple-500/5"
+            )} />
           </button>
 
           <button
             onClick={() => setStatFilter('submitted')}
             className={cn(
-              "rounded-xl p-4 shadow-sm hover:shadow-md transition-all transform hover:scale-105 focus:scale-105",
+              "group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-300 transform hover:scale-105 focus:scale-105 focus-ring",
+              "shadow-professional hover:shadow-professional-lg",
               statFilter === 'submitted' 
-                ? "ring-2 ring-green-500 dark:ring-green-400 bg-green-50 dark:bg-gray-700" 
-                : "bg-white dark:bg-gray-800"
+                ? "ring-2 ring-green-500 dark:ring-green-400 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20" 
+                : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
             )}
           >
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div className="flex items-center justify-between mb-3">
+              <div className={cn(
+                "p-2.5 rounded-xl transition-colors duration-300",
+                statFilter === 'submitted' 
+                  ? "bg-green-500 text-white shadow-lg" 
+                  : "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 group-hover:bg-green-100 dark:group-hover:bg-green-800/30"
+              )}>
+                <CheckCircle2 className="w-5 h-5" />
               </div>
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
+              <span className={cn(
+                "text-2xl sm:text-3xl font-bold transition-colors duration-300",
+                statFilter === 'submitted' ? "text-green-700 dark:text-green-300" : "text-gray-900 dark:text-white"
+              )}>
                 {taskStats.submitted}
               </span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Submitted</p>
+            <p className={cn(
+              "text-sm font-medium transition-colors duration-300",
+              statFilter === 'submitted' ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"
+            )}>
+              Submitted
+            </p>
+            <div className={cn(
+              "absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+              "bg-gradient-to-r from-green-500/5 to-emerald-500/5"
+            )} />
           </button>
         </div>
 
         {/* Task Categories */}
-        <TaskCategories
-          onCategorySelect={(category) => {
-            setSelectedCategory(category)
-            setStatFilter('all')
-          }}
-          selectedCategory={selectedCategory}
-          categoryCounts={categoryCounts}
-        />
+        <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <TaskCategories
+            onCategorySelect={(category) => {
+              setSelectedCategory(category)
+              setStatFilter('all')
+            }}
+            selectedCategory={selectedCategory}
+            categoryCounts={categoryCounts}
+          />
+        </div>
 
         {/* Task List */}
-        <main id="task-list" role="main" aria-label="Academic tasks and assignments">
-          {(statFilter !== 'all' || selectedCategory) && (
-            <header className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {getStatTitle()}
-              </h2>
+        <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          {statFilter !== 'all' && (
+            <div className="flex items-center justify-between mb-6 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-professional">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                  {getStatTitle()}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {getFilteredTasks().length} task{getFilteredTasks().length !== 1 ? 's' : ''} found
+                </p>
+              </div>
               <button
-                onClick={() => {
-                  setStatFilter('all')
-                  setSelectedCategory(null)
-                }}
-                className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-label="Clear all filters and show all tasks"
+                onClick={() => setStatFilter('all')}
+                className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors focus-ring"
               >
-                Clear filters
+                View All Tasks
               </button>
-            </header>
+            </div>
           )}
           
           <TaskList 
             tasks={getFilteredTasks()} 
             onTaskUpdate={loadTasks}
           />
-        </main>
-      </div>
+        </div>
     </div>
   )
 }
